@@ -1,0 +1,82 @@
+buildscript {
+	repositories {
+		maven { url "https://plugins.gradle.org/m2/" }
+	}
+	dependencies {
+		classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.1'
+	}
+}
+
+plugins {
+	id 'org.springframework.boot' version '2.7.5'
+	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+	id 'java'
+	id 'idea'
+}
+
+group = 'me.samueldcs'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+def reactiveGrpcVersion = '1.2.3'
+def grpcVersion = '1.50.2'
+def protobufVersion = '3.21.9'
+
+repositories {
+	mavenCentral()
+}
+
+apply plugin: 'com.google.protobuf'
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+	implementation "io.grpc:grpc-stub:${grpcVersion}"
+	implementation 'com.salesforce.servicelibs:grpc-spring:0.8.1'
+	implementation 'io.grpc:grpc-netty:1.50.2'
+	implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+	implementation "com.salesforce.servicelibs:reactor-grpc-stub:${reactiveGrpcVersion}"
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'io.projectreactor:reactor-test'
+}
+
+protobuf {
+	protoc {
+		// The artifact spec for the Protobuf Compiler
+		artifact = "com.google.protobuf:protoc:${protobufVersion}"
+	}
+	clean {
+		delete protobuf.generatedFilesBaseDir
+	}
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+		}
+		reactor {
+			artifact = "com.salesforce.servicelibs:reactor-grpc:${reactiveGrpcVersion}"
+		}
+	}
+	generateProtoTasks {
+		all()*.plugins {
+			grpc { }
+			reactor {}
+		}
+	}
+}
+
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/grpc')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/reactor')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/java')
+
+idea {
+	module {
+		generatedSourceDirs += file("build/generated/source/proto/main/grpc")
+		generatedSourceDirs += file("build/generated/source/proto/main/reactor")
+		generatedSourceDirs += file("build/generated/source/proto/main/java")
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
